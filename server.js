@@ -28,8 +28,7 @@ todoRoutes.route('/').get(function (req, res) {
 })
 
 todoRoutes.route('/:id').get(function (req, res) {
-    let id = req.params.id;
-    Todo.findById(id, function (err, todo) {
+    Todo.findById(req.params.id, function (err, todo) {
         res.json(todo);
     })
 })
@@ -43,6 +42,12 @@ todoRoutes.route('/add').post(function (req, res) {
         .catch(err => {
             res.status(400).send('Add Failed');
         })
+})
+
+todoRoutes.route('/delete/:id').delete(function (req, res) {
+    Todo.findByIdAndDelete(req.params.id, function (err, todo) {
+        res.json('Todos Deleted');
+    });
 })
 
 todoRoutes.route('/update/:id').post(function (req, res) {
