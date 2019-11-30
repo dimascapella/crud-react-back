@@ -4,7 +4,11 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const todoRoutes = express.Router();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const PORT = 8000;
+
+process.env.SECRET_KEY = 'secret'
 
 let Todo = require('./todo.model');
 
@@ -45,9 +49,8 @@ todoRoutes.route('/add').post(function (req, res) {
 })
 
 todoRoutes.route('/delete/:id').delete(function (req, res) {
-    Todo.findByIdAndDelete(req.params.id, function (err, todo) {
-        res.json('Todos Deleted');
-    });
+    Todo.findByIdAndDelete(req.params.id)
+        .then(() => res.json('Data Deleted'))
 })
 
 todoRoutes.route('/update/:id').post(function (req, res) {
@@ -66,6 +69,75 @@ todoRoutes.route('/update/:id').post(function (req, res) {
                 res.status(400).send('Update Failed');
             })
     })
+})
+
+todoRoutes.route('/register').post(function (req, res) {
+    const userData = {
+        nama: req.body.nama,
+        email: req.body.email,
+        password: req.body.password
+    }
+
+    Todo.findOne({
+        email: req.body.email
+    })
+        .then(user => {
+            if (!user) {
+                bcrypt.hash(req.body.password, 10, function (err, hash) {
+                    userData.password = hash
+                    Todo.create(userData)
+                        .then(user => {
+                            res.json('registered')
+                        })
+                        .catch(err => {
+                            res.send('error:' + err)
+                        })
+                })
+            } else {
+                res.json({ error: 'User Exist' })
+            }
+        })
+})
+
+todoRoutes.route('/login').post(function (req, res) {
+    Todo.findOne({
+        email: req.body.email
+    })
+        .then(user => {
+            if (user) {
+                if (bcrypt.compareSync(req.body.password, user.password)) {
+                    const payload = {
+                        _id: user._id,
+                        nama: user.nama,
+                        email: user.email,
+                        password: user.password
+                    }
+                    console.log(payload)
+                    let token = jwt.sign(payload, process.env.SECRET_KEY, {
+                        expiresIn: 22240
+                    })
+                    res.send(token)
+                }
+            } else {
+                res.json({
+                    error: "User doesn't exist"
+                })
+            }
+        })
+})
+
+todoRoutes.route('/profile').get(function (req, res) {
+    var decode = jwt.verify(req.headers['authorization'], process.env.SECRET_KEY)
+    Todo.findOne({
+        _id: decode._id
+    })
+        .then(user => {
+            if (user) {
+                res.json(user)
+            } else {
+                res.send("User doesn't exist")
+            }
+        })
 })
 
 app.use('/todos', todoRoutes);
