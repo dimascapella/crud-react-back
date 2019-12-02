@@ -112,8 +112,7 @@ todoRoutes.route('/login').post(function (req, res) {
                         email: user.email,
                         password: user.password
                     }
-                    console.log(payload)
-                    let token = jwt.sign(payload, process.env.SECRET_KEY, {
+                    let token = jwt.sign(payload, 'secretkey', {
                         expiresIn: 22240
                     })
                     res.send(token)
@@ -126,19 +125,35 @@ todoRoutes.route('/login').post(function (req, res) {
         })
 })
 
-todoRoutes.route('/profile').get(function (req, res) {
-    var decode = jwt.verify(req.headers['authorization'], process.env.SECRET_KEY)
-    Todo.findOne({
-        _id: decode._id
+// todoRoutes.route('/profile').get(function (req, res) {
+//     var decode = jwt.verify(req.headers['authorization'], process.env.SECRET_KEY)
+//     Todo.findOne({
+//         _id: decode._id
+//     })
+//         .then(user => {
+//             if (user) {
+//                 res.json(user)
+//             } else {
+//                 res.send("User doesn't exist")
+//             }
+//         })
+// })
+
+todoRoutes.route('/profile').post(verifyToken, function (req, res) {
+    jwt.verify(req.token, 'secretkey', (err, auth) => {
+        res.json(auth)
     })
-        .then(user => {
-            if (user) {
-                res.json(user)
-            } else {
-                res.send("User doesn't exist")
-            }
-        })
 })
+
+function verifyToken(req, res, next) {
+    const bearerHeader = req.headers['authorization'];
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(' ');
+        const bearerToken = bearer[1];
+        req.token = bearerToken;
+        next();
+    }
+}
 
 app.use('/todos', todoRoutes);
 
